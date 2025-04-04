@@ -1,0 +1,40 @@
+import socket  # Importa la biblioteca socket para manejar conexiones de red.
+import sys  # Importa sys para manejar la salida en tiempo real.
+
+def scan_ports(target, start_port, end_port):
+    # Muestra un mensaje indicando qué host y rango de puertos se van a escanear.
+    print(f"Escaneando {target} desde el puerto {start_port} hasta {end_port}...\n")
+    # Muestra en pantalla el objetivo y el rango de puertos que se van a escanear.
+
+    # Bucle que recorre todos los puertos desde start_port hasta end_port.
+    for port in range(start_port, end_port + 1):
+        # Crea un socket para la conexión.
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # Establece un tiempo de espera de 0.5 segundos para la conexión.
+        sock.settimeout(0.5)
+
+        # Intenta conectarse al puerto actual del objetivo.
+        result = sock.connect_ex((target, port))
+
+        # Muestra el progreso en tiempo real sobrescribiendo la línea anterior.
+        sys.stdout.write(f"\rEscaneando puerto: {port}...")
+        sys.stdout.flush()  # Asegura que la salida se muestre inmediatamente.
+
+        # Si la conexión fue exitosa (result == 0), significa que el puerto está abierto.
+        if result == 0:
+            print(f"\n[+] Puerto {port} ABIERTO")
+
+        # Cierra el socket para liberar recursos.
+        sock.close()
+
+    # Muestra un mensaje indicando que el escaneo ha finalizado.
+    print("\nEscaneo completado.")
+
+# Verifica si el script se está ejecutando directamente y no importado como módulo.
+if __name__ == "__main__":
+    # Pide al usuario la IP o dominio que quiere escanear.
+    target_host = input("Ingrese la IP o dominio a escanear: ")
+
+    # Llama a la función para escanear los puertos desde 0 hasta 65535.
+    scan_ports(target_host, 0, 65535)  # 65535 es el puerto máximo válido.
