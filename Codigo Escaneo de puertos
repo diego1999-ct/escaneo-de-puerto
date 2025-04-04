@@ -1,65 +1,71 @@
 import socket  # Importa la biblioteca socket para manejar conexiones de red (protocolo TCP/IP).
 import sys  # Importa sys para manejar la salida en tiempo real usando stdout.
+import threading  # Importa el módulo threading para trabajar con hilos (ejecución concurrente).
+
+def scan_port(target, port, file):
+    # Crea un socket TCP (SOCK_STREAM) con IPv4 (AF_INET) para realizar una conexión.
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    # Establece un tiempo de espera (timeout) de 0.5 segundos para la conexión.
+    sock.settimeout(0.5)
+
+    # Intenta conectarse al puerto especificado del objetivo (IP o dominio).
+    result = sock.connect_ex((target, port))
+
+    # Si el código de resultado es 0, significa que la conexión fue exitosa (puerto abierto).
+    if result == 0:
+        # Crea un mensaje indicando que el puerto está abierto.
+        mensaje_puerto = f"[+] Puerto {port} ABIERTO"
+        # Imprime el mensaje en la consola.
+        print(mensaje_puerto)
+        # Guarda el mensaje en el archivo de resultados.
+        file.write(mensaje_puerto + "\n")
+
+    # Cierra el socket para liberar los recursos del sistema.
+    sock.close()
 
 def scan_ports(target, start_port, end_port):
-    # Nombre del archivo donde se guardarán los resultados.
-    # Se reemplazan los puntos en la IP por guiones bajos para evitar errores en el nombre del archivo.
+    # Define el nombre del archivo donde se guardarán los resultados del escaneo.
+    # Reemplaza los puntos en la IP por guiones bajos para crear un nombre de archivo válido.
     filename = f"resultados_escaneo_{target.replace('.', '_')}.txt"
 
     # Abre el archivo en modo escritura ('w'). Si ya existe, lo sobrescribe.
     with open(filename, "w") as file:
-        # Crea un mensaje inicial indicando el host y rango de puertos a escanear.
+        # Crea un mensaje inicial indicando el objetivo y el rango de puertos a escanear.
         mensaje_inicial = f"Escaneando {target} desde el puerto {start_port} hasta {end_port}...\n"
-
-        # Imprime el mensaje en consola.
+        # Imprime el mensaje inicial en la consola.
         print(mensaje_inicial)
-
-        # Guarda el mismo mensaje en el archivo.
+        # Guarda el mensaje inicial en el archivo de texto.
         file.write(mensaje_inicial)
 
-        # Bucle para escanear desde el puerto de inicio hasta el de fin (inclusive).
+        # Lista que almacenará los hilos para escanear los puertos en paralelo.
+        threads = []
+
+        # Bucle que recorre todos los puertos desde start_port hasta end_port (inclusive).
         for port in range(start_port, end_port + 1):
-            # Crea un socket TCP (SOCK_STREAM) con IPv4 (AF_INET).
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Crea un nuevo hilo para escanear el puerto actual. Le pasa la IP, el puerto y el archivo de resultados.
+            thread = threading.Thread(target=scan_port, args=(target, port, file))
+            # Inicia el hilo.
+            thread.start()
+            # Guarda el hilo en la lista de hilos activos.
+            threads.append(thread)
 
-            # Establece un tiempo máximo de espera de 0.5 segundos para cada intento de conexión.
-            sock.settimeout(0.5)
+        # Espera a que todos los hilos terminen de ejecutarse.
+        for thread in threads:
+            # La función 'join()' hace que el hilo principal espere a que cada hilo termine.
+            thread.join()
 
-            # Intenta conectarse al puerto del host. Devuelve 0 si tiene éxito (puerto abierto).
-            result = sock.connect_ex((target, port))
-
-            # Muestra en consola en tiempo real el puerto que se está escaneando, sobreescribiendo la misma línea.
-            sys.stdout.write(f"\rEscaneando puerto: {port}...")
-            sys.stdout.flush()  # Fuerza la salida inmediata a la consola.
-
-            # Si el resultado es 0, el puerto está abierto.
-            if result == 0:
-                # Crea un mensaje para mostrar y guardar en el archivo.
-                mensaje_puerto = f"\n[+] Puerto {port} ABIERTO"
-
-                # Imprime el mensaje en consola.
-                print(mensaje_puerto)
-
-                # Guarda el mensaje en el archivo de texto.
-                file.write(mensaje_puerto + "\n")
-
-            # Cierra el socket para liberar recursos del sistema.
-            sock.close()
-
-        # Mensaje final indicando que el escaneo ha terminado.
+        # Crea un mensaje final indicando que el escaneo ha terminado.
         mensaje_final = "\nEscaneo completado."
-
-        # Imprime el mensaje en consola.
+        # Imprime el mensaje final en la consola.
         print(mensaje_final)
-
-        # Guarda el mensaje en el archivo.
+        # Guarda el mensaje final en el archivo de texto.
         file.write(mensaje_final + "\n")
 
-# Punto de entrada del programa. Se ejecuta si este archivo se ejecuta directamente.
+# Verifica si el script se está ejecutando directamente y no importado como módulo.
 if __name__ == "__main__":
-    # Solicita al usuario que introduzca la IP o el dominio a escanear.
+    # Solicita al usuario que ingrese la IP o dominio a escanear.
     target_host = input("Ingrese la IP o dominio a escanear: ")
 
-    # Llama a la función scan_ports con los parámetros:
-    # IP objetivo, puerto inicial (0), y puerto final (65535, que es el máximo permitido en TCP/UDP).
+    # Llama a la función scan_ports para escanear los puertos desde 0 hasta 65535 (puerto máximo válido en TCP).
     scan_ports(target_host, 0, 65535)
